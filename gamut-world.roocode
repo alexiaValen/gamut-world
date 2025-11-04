@@ -1,0 +1,205 @@
+app GamutWorld {
+  name: "Gamut World"
+  description: "A colorful world where kids learn to express emotions, build social skills, and strengthen speech through AI-powered play."
+
+  theme: {
+    primaryColor: "#69C9D0",
+    secondaryColor: "#FFD166",
+    accentColor: "#CDB4DB",
+    backgroundGradient: ["#E0F7FA", "#FCE7F3"],
+    fontFamily: "Poppins"
+  }
+
+  logo: "gamutworld_logo.png"
+  icon: "🌈"
+
+  pages {
+    Home {
+      layout: "column center"
+      style: {
+        backgroundColor: "#F6F9FC"
+        padding: 20
+        fontFamily: "Comic Sans MS"
+      }
+
+      text("👋 Welcome to SocialBuddy+!", { fontSize: 28, fontWeight: "bold", color: "#333" })
+      text("Learn emotions, conversation, and clear speech through fun stories!", { marginBottom: 20 })
+
+      button("Start Adventure", { onClick: goTo(ChooseStory), color: "#4CAF50", textColor: "white" })
+      button("My Progress", { onClick: goTo(ProgressPage), color: "#2196F3", textColor: "white" })
+      button("Parent Dashboard", { onClick: goTo(ParentDashboard), color: "#9C27B0", textColor: "white" })
+    }
+
+    ChooseStory {
+      layout: "scroll"
+      text("Pick your story:", { fontSize: 24, marginBottom: 20 })
+
+      list([
+        { title: "Making a New Friend", image: "friend.png" },
+        { title: "Understanding Emotions", image: "emotions.png" },
+        { title: "Using My Voice", image: "voice.png" },
+        { title: "Asking for Help", image: "help.png" }
+      ]) {
+        onItemClick: (item) => goTo(StoryPlay, { story: item.title })
+      }
+
+      button("Back to Home", { onClick: goTo(Home), marginTop: 20 })
+    }
+
+    StoryPlay {
+      layout: "column center"
+      text("🎬 {{story}}", { fontSize: 26, fontWeight: "bold" })
+      text("Listen, read, and practice speaking!", { marginBottom: 20 })
+
+      video("{{story}}.mp4", { autoPlay: true })
+
+      aiChat("storyGuide") {
+        prompt: "You are a friendly guide who helps kids understand feelings and practice speech gently."
+        style: { width: "90%", height: 250 }
+      }
+
+      button("Next", { onClick: goTo(SpeechPractice), color: "#FF9800", textColor: "white" })
+    }
+
+    SpeechPractice {
+      layout: "column center"
+      text("🗣️ Let's Practice Speaking!", { fontSize: 24, fontWeight: "bold" })
+      text("Repeat after me, take your time!", { marginBottom: 10 })
+
+      aiVoicePrompt("speechCoach") {
+        phrase: "Hello, my name is..."
+        voice: "friendly_female"
+      }
+
+      speechRecorder("childSpeech", { maxDuration: 10 })
+      speechFeedback("childSpeech") {
+        analyze: {
+          clarity: true,
+          confidence: true,
+          delayTolerance: 3.0 // seconds before prompting again
+        }
+      }
+
+      button("Submit Practice", {
+        onClick: runAction(analyzeSpeech),
+        color: "#4CAF50", textColor: "white", marginTop: 15
+      })
+
+      button("Next", { onClick: goTo(EmotionCheck), color: "#03A9F4", textColor: "white", marginTop: 10 })
+    }
+
+    EmotionCheck {
+      layout: "column center"
+      text("How did that feel?", { fontSize: 22 })
+      emotionDetector("emotionInput")
+
+      button("Submit Emotion", { 
+        onClick: runAction(recordEmotion),
+        color: "#673AB7", 
+        textColor: "white" 
+      })
+    }
+
+    ProgressPage {
+      layout: "column center"
+      text("🏆 My Progress", { fontSize: 26, fontWeight: "bold" })
+      progressTracker("socialSkillPoints")
+
+      list([
+        { badge: "Brave Speaker", earned: true },
+        { badge: "Emotion Expert", earned: false },
+        { badge: "Kind Communicator", earned: false }
+      ])
+
+      button("Back", { onClick: goTo(Home), marginTop: 20 })
+    }
+
+    RewardStore {
+    layout: "scroll"
+    text("🎨 Reward Store", { fontSize: 26, fontWeight: "bold", marginBottom: 10 })
+    text("Use your earned points to unlock fun items!", { marginBottom: 20 })
+
+    storeGrid([
+      { name: "Cool Hat", cost: 30, image: "hat.png" },
+      { name: "Friendly Pet", cost: 50, image: "pet.png" },
+      { name: "Room Theme: Ocean", cost: 40, image: "ocean_theme.png" },
+      { name: "Sticker Pack", cost: 20, image: "stickers.png" }
+    ]) {
+      onItemClick: (item) => runAction(purchaseItem, { item: item.name, cost: item.cost })
+    }
+
+    text("Your Points: {{getPoints('socialSkillPoints')}}", { fontSize: 18, marginTop: 15 })
+    button("Back to Home", { onClick: goTo(Home), marginTop: 20 })
+  }
+  }
+
+actions {
+  
+  purchaseItem {
+    input: { item, cost }
+    condition: getPoints("socialSkillPoints") >= cost
+    run: [
+      deductPoints("socialSkillPoints", cost),
+      addToInventory(item),
+      showMessage("You bought " + item + "! 🎉")
+    ]
+    else: showMessage("Not enough points yet! Keep practicing 😊")
+  }
+
+    ParentDashboard {
+      layout: "scroll"
+      text("👩‍👧 Parent Dashboard", { fontSize: 26, fontWeight: "bold" })
+      text("Track your child's speech progress and confidence over time.", { marginBottom: 10 })
+
+      graph("Speech Clarity", { data: getMetric("clarityOverTime"), type: "line" })
+      graph("Response Confidence", { data: getMetric("confidenceScore"), type: "line" })
+      graph("Emotion Trends", { data: getMetric("emotionHistory"), type: "bar" })
+
+      text("Tips from AI Speech Coach:", { fontSize: 18, marginTop: 15 })
+      aiText("speechCoach") {
+        prompt: "Give gentle suggestions to parents to help kids with speech delays continue improving in a positive way."
+      }
+
+      button("Back", { onClick: goTo(Home), marginTop: 20 })
+    }
+  }
+
+  actions {
+    recordEmotion {
+      input: emotionInput
+      run: addPointsToTracker("socialSkillPoints", 10)
+      then: showMessage("Great job recognizing your feelings! 🌟")
+    }
+
+    analyzeSpeech {
+      input: childSpeech
+      run: evaluateSpeech({
+        clarityWeight: 0.6,
+        confidenceWeight: 0.4,
+        allowDelay: true
+      })
+      then: showMessage("Nice effort! Remember: taking your time is part of learning 💖")
+    }
+  }
+
+  ai {
+    storyGuide {
+      model: "gpt-5-mini"
+      personality: "friendly teacher"
+      examples: [
+        { user: "I can’t say the words right.", bot: "That’s totally okay! Everyone learns at their own speed. Let’s try together slowly." },
+        { user: "I’m shy.", bot: "It’s okay to be shy! Let’s take a deep breath and try again when you’re ready." }
+      ]
+    }
+
+
+    speechCoach {
+      model: "gpt-5-mini"
+      personality: "gentle speech therapist"
+      examples: [
+        { user: "My child pauses a lot.", bot: "Pausing is part of learning. Celebrate effort over perfection. Gentle repetition builds confidence." },
+        { user: "My child skips words.", bot: "Encourage them to slow down and use visual cues. Avoid correcting too much—focus on connection." }
+      ]
+    }
+  }
+}
